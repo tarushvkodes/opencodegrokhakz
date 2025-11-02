@@ -30,14 +30,53 @@
         </header>
         <aside class="sidebar">
             <h3>Current Values</h3>
-            <div id="current-values">
-                <p>Oxygen: <span id="oxygen-val">20.5%</span></p>
-                <p>Temperature: <span id="temp-val">22°C</span></p>
-                <p>Food Inventory: <span id="food-val">85%</span></p>
-                <p>Power Usage: <span id="power-val">60%</span></p>
-                <p>Sleep Cycles: <span id="sleep-val">7.5h</span></p>
-                <p>Wellness: <span id="wellness-val">Good</span></p>
-            </div>
+             <div id="current-values">
+                 <p>Oxygen: <span id="oxygen-val">20.5%</span></p>
+                 <p>Temperature: <span id="temp-val">22°C</span></p>
+                 <p>Food Inventory: <span id="food-val">85%</span></p>
+                 <p>Power Usage: <span id="power-val">60%</span></p>
+                 <p>Sleep Cycles: <span id="sleep-val">7.5h</span></p>
+                 <p>Wellness: <span id="wellness-val">Good</span></p>
+             </div>
+             <h3>Bay Occupancy Status</h3>
+             <div id="bay-occupancy">
+                 <div class="bay" data-type="general">
+                     <span class="bay-name">Kitchen</span>
+                     <div class="indicator"></div>
+                 </div>
+                 <div class="bay" data-type="general">
+                     <span class="bay-name">Lab</span>
+                     <div class="indicator"></div>
+                 </div>
+                 <div class="bay" data-type="crew" data-crew="Dheeraj Chennaboina">
+                     <span class="bay-name">Crew Room – Dheeraj Chennaboina</span>
+                     <div class="indicator"></div>
+                 </div>
+                 <div class="bay" data-type="crew" data-crew="Tarushv Kosgi">
+                     <span class="bay-name">Crew Room – Tarushv Kosgi</span>
+                     <div class="indicator"></div>
+                 </div>
+                 <div class="bay" data-type="crew" data-crew="Abhinav Boora">
+                     <span class="bay-name">Crew Room – Abhinav Boora</span>
+                     <div class="indicator"></div>
+                 </div>
+                 <div class="bay" data-type="crew" data-crew="Lalith Dasa">
+                     <span class="bay-name">Crew Room – Lalith Dasa</span>
+                     <div class="indicator"></div>
+                 </div>
+                 <div class="bay" data-type="general">
+                     <span class="bay-name">Maintenance Bay</span>
+                     <div class="indicator"></div>
+                 </div>
+                 <div class="bay" data-type="general">
+                     <span class="bay-name">Greenhouse</span>
+                     <div class="indicator"></div>
+                 </div>
+                 <div class="bay" data-type="general">
+                     <span class="bay-name">Control Room</span>
+                     <div class="indicator"></div>
+                 </div>
+             </div>
         </aside>
         <main class="main-content">
              <section id="alerts" class="alerts-section">

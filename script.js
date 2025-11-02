@@ -10,6 +10,8 @@ let users = [
   { id: 6, name: 'Crew Member 6', role: 'Pilot', bio: 'Mission pilot.', alerts: [], notes: '', privileges: ['read', 'navigation'] }
 ];
 
+const crewMembers = ['Dheeraj Chennaboina', 'Tarushv Kosgi', 'Abhinav Boora', 'Lalith Dasa'];
+
 let currentUser = null;
 let currentModalUser = null;
 
@@ -35,6 +37,31 @@ function randomNormal(mean, std) {
   while(v === 0) v = Math.random();
   let z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
   return mean + z * std;
+}
+
+// Update bay occupancy
+function updateBayOccupancy() {
+    const bays = document.querySelectorAll('.bay');
+    bays.forEach(bay => {
+        const indicator = bay.querySelector('.indicator');
+        const isOccupied = Math.random() > 0.5;
+        let tooltip = '';
+        if (isOccupied) {
+            indicator.className = 'indicator occupied';
+            const type = bay.dataset.type;
+            let crew;
+            if (type === 'crew') {
+                crew = bay.dataset.crew;
+            } else {
+                crew = crewMembers[Math.floor(Math.random() * crewMembers.length)];
+            }
+            tooltip = `Occupied by ${crew}`;
+        } else {
+            indicator.className = 'indicator vacant';
+            tooltip = 'Vacant';
+        }
+        indicator.title = tooltip;
+    });
 }
 
 // Initialize charts
@@ -625,6 +652,8 @@ document.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('DOMContentLoaded', () => {
   initCharts();
   displayUsers();
+  updateBayOccupancy();
+  setInterval(updateBayOccupancy, 30000);
   // Initial updates to populate graphs
   for (let i = 0; i < 50; i++) {
     const t = i * 0.1; // Simulate past data

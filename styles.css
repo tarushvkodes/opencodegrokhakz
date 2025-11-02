@@ -98,6 +98,39 @@ body::before {
     color: #4ecdc4;
 }
 
+#bay-occupancy {
+    margin-top: 20px;
+}
+
+.bay {
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bay-name {
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.indicator {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    transition: all 1s ease;
+}
+
+.occupied {
+    background: #00ff00;
+    box-shadow: 0 0 15px #00ff00, 0 0 30px #00ff00;
+}
+
+.vacant {
+    background: #ff0000;
+    box-shadow: 0 0 15px #ff0000, 0 0 30px #ff0000;
+}
+
 .main-content {
     padding: 30px;
     overflow-y: auto;
