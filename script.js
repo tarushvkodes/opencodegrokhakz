@@ -648,8 +648,26 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+// Check API key on load
+function checkApiKey() {
+  const apiKey = localStorage.getItem('gemini-api-key');
+  const setupDiv = document.getElementById('api-key-setup');
+  if (!apiKey || apiKey === '') {
+    setupDiv.style.display = 'block';
+  } else {
+    setupDiv.style.display = 'none';
+    enableTerminal();
+  }
+}
+
+// Enable terminal after API key is set
+function enableTerminal() {
+  // Terminal is already enabled, but we can add any initialization here
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+  checkApiKey();
   initCharts();
   displayUsers();
   updateBayOccupancy();
@@ -751,90 +769,256 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Integrated Chat functionality with Gun.js in uplink tab
-  var gun = Gun({
-    peers: ['https://gun-manhattan.herokuapp.com/gun', 'https://gun-us.herokuapp.com/gun', 'https://gun-eu.herokuapp.com/gun']
-  });
-
-  var chatMessages = gun.get('habitat-chat-room');
-
-  // Mode-based nickname
-  var commMode = localStorage.getItem('comm-mode') || 'craft';
-  var chatNickname = commMode === 'craft' ? 'CRAFT[1]' : 'BASE[DELTA]';
-
+  // Gemini AI Uplink functionality
   var chatOutput = document.getElementById('uplink-chat-output');
+  if (!chatOutput) {
+    console.error('❌ Critical Error: Chat output element not found. Aborting Gemini chat initialization.');
+    return;
+  }
+  
   var chatMessagesDiv = chatOutput.querySelector('.chat-messages');
-  chatMessagesDiv.innerHTML = '<div>[System] Uplink established. Ready to send messages to Earth.</div><div>[System] Last contact: 2 hours ago. Status: Nominal.</div><div>[System] Connecting to decentralized chat network...</div><div>[System] Messages may appear with delay. Mode: ' + commMode.toUpperCase() + '</div>';
+  if (!chatMessagesDiv) {
+    console.error('❌ Critical Error: Chat messages div not found. Aborting Gemini chat initialization.');
+    return;
+  }
+  
+  chatMessagesDiv.innerHTML = '<div>[System] Uplink established. Ready to communicate with Life Craft AI.</div><div>[System] Last contact: 2 hours ago. Status: Nominal.</div><div>[System] Gemini AI system online.</div>';
+  
   var chatInput = document.getElementById('uplink-chat-input');
+  if (!chatInput) {
+    console.error('❌ Critical Error: Chat input element not found. Aborting Gemini chat initialization.');
+    return;
+  }
+  
   var clearChatButton = document.getElementById('clearChatButton');
-  var modeRadios = document.querySelectorAll('input[name="comm-mode"]');
+  if (!clearChatButton) {
+    console.error('❌ Critical Error: Clear chat button element not found. Aborting Gemini chat initialization.');
+    return;
+  }
+  
+  console.log('✅ Gemini AI Chat initialized successfully');
 
-  var displayedChatMessages = {};
-  var sentMessages = new Set();
-
-  function appendChatMessage(sender, message, timestamp) {
+  function appendChatMessage(sender, message, isGemini = false) {
     var div = document.createElement('div');
-    var timeStr = new Date(timestamp).toLocaleTimeString();
-    div.textContent = "[" + timeStr + "] " + sender + ": " + message;
+    var timestamp = new Date().toLocaleTimeString();
+    if (isGemini) {
+      div.className = 'gemini-message';
+      div.innerHTML = `<span class="timestamp">[${timestamp}]</span> <span class="sender">${sender}:</span> <span class="message">${message}</span>`;
+    } else {
+      div.innerHTML = `<span class="timestamp">[${timestamp}]</span> <span class="sender">${sender}:</span> <span class="message">${message}</span>`;
+    }
     chatMessagesDiv.appendChild(div);
     chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
   }
 
-  chatMessages.map().on(function(data, key) {
-    if (data && !displayedChatMessages[key]) {
-      var msgKey = data.sender + ':' + data.message + ':' + data.timestamp;
-      if (!sentMessages.has(msgKey)) {
-        displayedChatMessages[key] = true;
-        appendChatMessage(data.sender, data.message, data.timestamp);
+  function appendSystemMessage(message) {
+    var div = document.createElement('div');
+    div.className = 'system-message';
+    div.textContent = message;
+    chatMessagesDiv.appendChild(div);
+    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+  }
+
+  async function sendToGemini(message) {
+    const apiKey = localStorage.getItem('gemini-api-key');
+    if (!apiKey) {
+      console.error('❌ No API key in localStorage');
+      return '[Error] No API key configured. Please set your API key in the Uplink tab.';
+    }
+
+    const systemPrompt = `You are "Gemini", the onboard AI system aboard the Martian Habitat Life Craft.
+You are communicating with Mission Control (the user) at Base on Mars.
+Respond with professionalism, technical accuracy, and immersive sci-fi realism.
+Keep answers concise and formatted like uplink transmissions.
+Example:
+[Uplink 07:42 UTC] Oxygen systems stable at 98%. No anomalies detected.`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      const requestUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+      
+      const response = await fetch(requestUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `${systemPrompt}\n\nUser message: ${message}`
+            }]
+          }]
+        })
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`❌ API Error ${response.status}:`, errorData.error?.message);
+        
+        if (response.status === 400) {
+          return '[Error] Invalid API key or request format. Please verify your API key.';
+        } else if (response.status === 403) {
+          return '[Error] API key access denied. Enable the Generative Language API in Google Cloud Console.';
+        } else if (response.status === 429) {
+          return '[Error] Rate limit exceeded. Please wait a moment and try again.';
+        } else {
+          return `[Error] API request failed (${response.status}). Try again.`;
+        }
+      }
+
+      const data = await response.json();
+      
+      if (!data.candidates || data.candidates.length === 0) {
+        return '[Error] No response generated. Try again.';
+      }
+      
+      const geminiResponse = data.candidates[0].content.parts[0].text;
+      return geminiResponse;
+      
+    } catch (error) {
+      clearTimeout(timeoutId);
+      console.error('❌ Network error:', error.message);
+      
+      if (error.name === 'AbortError') {
+        return '[Error] Request timed out. Please try again.';
+      }
+      return '[Error] Network error. Check connection and API key.';
+    }
+  }
+
+  function decryptTextAnimation(text, element) {
+    const chars = '█@%$#&*!?><{}[]';
+    let currentText = '';
+    let index = 0;
+
+    const interval = setInterval(() => {
+      if (index < text.length) {
+        currentText += text[index];
+        let displayText = currentText;
+        // Add random chars for remaining length
+        for (let i = currentText.length; i < text.length; i++) {
+          displayText += chars[Math.floor(Math.random() * chars.length)];
+        }
+        element.textContent = displayText;
+        index++;
+      } else {
+        clearInterval(interval);
+        element.textContent = text;
+        element.classList.add('decrypted');
+      }
+    }, 40); // 40ms per character
+  }
+
+  chatInput.addEventListener('keydown', async function(e) {
+    if (e.key === 'Enter' && chatInput.value.trim() !== "") {
+      e.preventDefault();
+      
+      const apiKey = localStorage.getItem('gemini-api-key');
+      if (!apiKey) {
+        appendSystemMessage('[System] Error: Please configure your Gemini API key first.');
+        console.error('❌ No API key found in localStorage');
+        return;
+      }
+
+      const msg = chatInput.value.trim();
+      console.log('📤 Sending message:', msg);
+      
+      appendChatMessage('MISSION CONTROL', msg);
+      chatInput.value = "";
+      chatInput.disabled = true;
+
+      // Show transmitting message
+      const transmittingDiv = document.createElement('div');
+      transmittingDiv.className = 'transmitting-message';
+      transmittingDiv.textContent = '📡 Transmitting to Life Craft…';
+      chatMessagesDiv.appendChild(transmittingDiv);
+      chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+
+      // Wait 1 second then show decrypting
+      setTimeout(() => {
+        transmittingDiv.textContent = 'Decrypting Transmission...';
+        transmittingDiv.className = 'decrypting-message';
+      }, 1000);
+
+      // Send to Gemini
+      const geminiResponse = await sendToGemini(msg);
+
+      // Re-enable input
+      chatInput.disabled = false;
+      chatInput.focus();
+
+      // Remove temporary messages if still present
+      if (chatMessagesDiv.contains(transmittingDiv)) {
+        chatMessagesDiv.removeChild(transmittingDiv);
+      }
+
+      // Display response
+      if (geminiResponse && geminiResponse.startsWith('[Error]')) {
+        console.error('❌ Error from Gemini:', geminiResponse);
+        appendSystemMessage(geminiResponse);
+      } else if (geminiResponse) {
+        console.log('✅ Response received from Gemini');
+        const geminiDiv = document.createElement('div');
+        geminiDiv.className = 'gemini-message';
+        const timestamp = new Date().toLocaleTimeString();
+        geminiDiv.innerHTML = `<span class="timestamp">[${timestamp}]</span> <span class="sender">GEMINI:</span> <span class="message"></span>`;
+        const messageSpan = geminiDiv.querySelector('.message');
+        chatMessagesDiv.appendChild(geminiDiv);
+        decryptTextAnimation(geminiResponse, messageSpan);
+      } else {
+        console.error('❌ No response from Gemini');
+        appendSystemMessage('[System] No response received from Gemini.');
       }
     }
   });
 
-  // Mode switch handler
-  modeRadios.forEach(radio => {
-    radio.addEventListener('change', function() {
-      commMode = this.value;
-      localStorage.setItem('comm-mode', commMode);
-      chatNickname = commMode === 'craft' ? 'CRAFT[1]' : 'BASE[DELTA]';
-      document.getElementById('chat-prompt').textContent = commMode === 'craft' ? 'CRAFT>' : 'BASE>';
-      var modeDiv = document.createElement('div');
-      modeDiv.textContent = '[System] Switched to ' + commMode.toUpperCase() + ' mode. Nickname: ' + chatNickname;
-      chatMessagesDiv.appendChild(modeDiv);
-      chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
-    });
-  });
-
-  // Set initial mode
-  document.querySelector(`input[name="comm-mode"][value="${commMode}"]`).checked = true;
-  document.getElementById('chat-prompt').textContent = commMode === 'craft' ? 'CRAFT>' : 'BASE>';
-
-  chatInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && chatInput.value.trim() !== "") {
-      var msg = chatInput.value.trim();
-      var timestamp = Date.now();
-      var msgKey = chatNickname + ':' + msg + ':' + timestamp;
-      sentMessages.add(msgKey);
-      chatMessages.set({
-        sender: chatNickname,
-        message: msg,
-        timestamp: timestamp
-      });
-      // Local echo for immediate feedback
-      appendChatMessage(chatNickname, msg, timestamp);
-      chatInput.value = "";
-    }
-  });
-
   clearChatButton.addEventListener('click', function() {
-    if (confirm("Are you sure you want to clear the chat for everyone?")) {
-      chatMessages.map().once(function(data, key) {
-        if (key) {
-          chatMessages.get(key).put(null);
-        }
-      });
-      chatMessagesDiv.innerHTML = '<div>[System] Chat cleared.</div>';
-      displayedChatMessages = {};
-      sentMessages.clear();
+    chatMessagesDiv.innerHTML = '<div>[System] Chat cleared.</div>';
+  });
+
+  // API Key setup
+  const setupDiv = document.getElementById('api-key-setup');
+  const saveApiKeyBtn = document.getElementById('save-api-key');
+  const apiKeyInput = document.getElementById('api-key-input');
+
+  saveApiKeyBtn.addEventListener('click', () => {
+    const apiKey = apiKeyInput.value.trim();
+    if (apiKey) {
+      localStorage.setItem('gemini-api-key', apiKey);
+      setupDiv.style.display = 'none';
+      appendSystemMessage('[System] API key saved successfully. Gemini AI is now online.');
+      enableTerminal();
+    } else {
+      alert('Please enter a valid API key.');
     }
   });
+
+  // Allow Enter key to save API key
+  apiKeyInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      saveApiKeyBtn.click();
+    }
+  });
+
+  // Add button to reset/change API key
+  const resetApiKeyBtn = document.createElement('button');
+  resetApiKeyBtn.textContent = 'Change API Key';
+  resetApiKeyBtn.id = 'reset-api-key';
+  resetApiKeyBtn.style.marginLeft = '10px';
+  resetApiKeyBtn.addEventListener('click', () => {
+    if (confirm('Do you want to change your Gemini API key?')) {
+      localStorage.removeItem('gemini-api-key');
+      setupDiv.style.display = 'block';
+      apiKeyInput.value = '';
+      appendSystemMessage('[System] Please enter a new API key.');
+    }
+  });
+  
+  // Insert reset button after clear chat button if button exists
+  if (clearChatButton && clearChatButton.parentNode) {
+    clearChatButton.parentNode.insertBefore(resetApiKeyBtn, clearChatButton.nextSibling);
+  }
 });
